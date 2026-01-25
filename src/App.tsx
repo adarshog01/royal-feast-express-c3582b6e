@@ -31,10 +31,7 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/momos" element={<CategoryPage />} />
-              <Route path="/kathi-rolls" element={<CategoryPage />} />
-              <Route path="/burgers" element={<CategoryPage />} />
-              <Route path="/cold-coffee" element={<CategoryPage />} />
+              <Route path="/:slug" element={<CategoryPage />} />
               <Route path="/product/:id" element={<ProductPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/payment" element={<PaymentPage />} />

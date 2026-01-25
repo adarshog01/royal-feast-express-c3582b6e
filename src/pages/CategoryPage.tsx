@@ -1,19 +1,27 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { getCategoryBySlug, getMenuItemsByCategory } from "@/data/menuData";
+import { getCategoryBySlug, getMenuItemsByCategory, categories } from "@/data/menuData";
 import ProductCard from "@/components/ProductCard";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 
+const validSlugs = ["momos", "kathi-rolls", "burgers", "cold-coffee"];
+
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const category = getCategoryBySlug(slug || "");
-  const products = getMenuItemsByCategory(slug || "");
+  
+  // Check if this is a valid category slug
+  if (!slug || !validSlugs.includes(slug)) {
+    return <Navigate to="/" replace />;
+  }
+
+  const category = getCategoryBySlug(slug);
+  const products = getMenuItemsByCategory(slug);
 
   if (!category) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-24">
         <p className="text-xl text-muted-foreground">Category not found</p>
       </div>
     );
@@ -74,11 +82,17 @@ const CategoryPage = () => {
         {/* Products Grid */}
         <section className="py-12 bg-background">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {products.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
-              ))}
-            </div>
+            {products.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-lg">No items available in this category</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {products.map((product, index) => (
+                  <ProductCard key={product.id} product={product} index={index} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
