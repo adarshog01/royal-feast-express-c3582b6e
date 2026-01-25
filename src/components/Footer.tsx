@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Phone, MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, Phone } from "lucide-react";
 const Footer = () => {
   return <footer className="bg-secondary text-secondary-foreground">
       {/* Ornamental Divider */}
@@ -41,8 +41,8 @@ const Footer = () => {
         }}>
             <h4 className="font-serif text-xl font-semibold text-primary mb-4">Contact</h4>
             <div className="space-y-3">
-              <a className="flex items-center gap-3 hover:text-primary transition-colors" href="tel:+9186838 93710"> +91 86838 93710
-​<Phone className="w-5 h-5 text-primary" />
+              <a className="flex items-center gap-3 hover:text-primary transition-colors text-right" href="tel:+9186838 93710"> +91 86838 93710 ​
+​​<Phone className="w-5 h-5 text-primary" />
                 <span className="">​​​+91</span>
               </a>
               <div className="flex items-start gap-3">
