@@ -33,7 +33,7 @@ const Header = () => {
           <motion.h1 className={`font-serif text-2xl md:text-3xl font-bold transition-colors duration-300 ${isScrolled || !isHome ? "text-secondary" : "text-secondary"}`} whileHover={{
           scale: 1.02
         }}>
-            <span className="text-gradient-gold text-white text-4xl font-serif">Kovish</span>
+            <span className="text-gradient-gold text-4xl font-serif text-primary">Kovish</span>
           </motion.h1>
         </Link>
 
