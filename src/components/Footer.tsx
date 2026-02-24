@@ -43,7 +43,8 @@ const Footer = () => {
             <div className="space-y-3">
               <a href="tel:+919999999999" className="flex items-center gap-3 hover:text-primary transition-colors">
                 <Phone className="w-5 h-5 text-primary" />
-                <span className="">+91 86838 93710  </span>
+                <span className="">+91 8353964663
+    </span>
               </a>
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-primary mt-0.5" />
@@ -53,8 +54,7 @@ const Footer = () => {
           </motion.div>
 
           {/* Hours */}
-          <motion.div initial={{
-          opacity: 0,
+          <motion.div initial={{ opacity: 0,
           y: 20
         }} whileInView={{
           opacity: 1,
