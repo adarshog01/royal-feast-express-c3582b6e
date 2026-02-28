@@ -1,41 +1,42 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle, PartyPopper, Home } from "lucide-react";
+import { CheckCircle, Home, MapPin, Truck } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import confetti from "canvas-confetti";
 
-const OrderSuccessPage = () => {
-  useEffect(() => {
-    // Celebration confetti
-    const duration = 3 * 1000;
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+interface OrderDetails {
+  orderId: string;
+  items: { name: string; qty: number; price: number }[];
+  subtotal: number;
+  discount: number;
+  deliveryCharge: number;
+  total: number;
+  sector: number;
+  zone: string;
+  date: string;
+  time: string;
+}
 
-    function randomInRange(min: number, max: number) {
-      return Math.random() * (max - min) + min;
+const OrderSuccessPage = () => {
+  const [order, setOrder] = useState<OrderDetails | null>(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('kovish_last_order');
+    if (stored) {
+      setOrder(JSON.parse(stored));
     }
 
-    const interval = setInterval(function () {
-      const timeLeft = animationEnd - Date.now();
+    // Gold confetti
+    const duration = 3000;
+    const end = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
-
-      const particleCount = 50 * (timeLeft / duration);
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: ["#D4A574", "#8B4513", "#FFD700"],
-      });
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: ["#D4A574", "#8B4513", "#FFD700"],
-      });
+    const interval = setInterval(() => {
+      if (Date.now() > end) return clearInterval(interval);
+      const count = 40 * ((end - Date.now()) / duration);
+      confetti({ ...defaults, particleCount: count, origin: { x: Math.random() * 0.4 + 0.1, y: Math.random() - 0.2 }, colors: ["#C6A75E", "#8B6914", "#FFD700", "#2C1810"] });
+      confetti({ ...defaults, particleCount: count, origin: { x: Math.random() * 0.4 + 0.5, y: Math.random() - 0.2 }, colors: ["#C6A75E", "#8B6914", "#FFD700", "#2C1810"] });
     }, 250);
 
     return () => clearInterval(interval);
@@ -43,87 +44,93 @@ const OrderSuccessPage = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background grain-texture px-4 py-24">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center max-w-md"
+          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+          className="text-center max-w-lg w-full relative z-10"
         >
-          {/* Success Icon */}
+          {/* Gold checkmark */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-24 h-24 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center"
+            transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
+            className="w-24 h-24 mx-auto mb-8 rounded-full flex items-center justify-center"
+            style={{ background: 'hsl(42 60% 57% / 0.12)', border: '2px solid hsl(42 60% 57% / 0.3)' }}
           >
-            <CheckCircle className="w-14 h-14 text-green-600" />
+            <CheckCircle className="w-14 h-14 text-primary" />
           </motion.div>
 
-          {/* Title */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-4"
+            className="font-serif text-3xl md:text-4xl font-bold text-secondary mb-3"
           >
             Order Confirmed!
           </motion.h1>
 
-          {/* Party Icon */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex justify-center mb-6"
-          >
-            <PartyPopper className="w-12 h-12 text-primary animate-bounce" />
-          </motion.div>
+          {order && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-8"
+            >
+              <p className="text-primary font-serif text-xl font-semibold mb-1">{order.orderId}</p>
+              <p className="text-muted-foreground text-sm">{order.date} at {order.time}</p>
+            </motion.div>
+          )}
 
-          {/* Message */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-muted-foreground text-lg mb-8"
-          >
-            Your delicious food is on the way! 🛵
-            <br />
-            <span className="text-sm">
-              We'll deliver it fresh and hot to your doorstep in Sonipat.
-            </span>
-          </motion.p>
+          {/* Order Details Card */}
+          {order && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-card rounded-2xl p-6 mb-8 text-left border border-border/50"
+              style={{ boxShadow: 'var(--shadow-card)' }}
+            >
+              <div className="space-y-2 mb-4">
+                {order.items.map((item, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{item.name} × {item.qty}</span>
+                    <span>₹{item.price * item.qty}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-border pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>₹{order.subtotal}</span></div>
+                {order.discount > 0 && <div className="flex justify-between text-primary"><span>Discount</span><span>-₹{order.discount.toFixed(0)}</span></div>}
+                <div className="flex justify-between text-muted-foreground">
+                  <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Sector {order.sector} ({order.zone})</span>
+                  <span>₹{order.deliveryCharge}</span>
+                </div>
+                <div className="flex justify-between text-lg font-semibold pt-2 border-t border-border">
+                  <span>Total Paid</span>
+                  <span className="text-primary">₹{order.total.toFixed(0)}</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-          {/* Divider */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 0.6 }}
-            className="divider-royal mb-8"
-          />
-
-          {/* Thank You */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="font-serif text-2xl text-primary mb-8"
+            transition={{ delay: 0.6 }}
+            className="text-muted-foreground mb-8"
           >
-            Thank you for choosing Kovish!
+            Your delicious food is being prepared! 🛵
+            <br />
+            <span className="text-sm">We'll deliver it fresh and hot to your doorstep.</span>
           </motion.p>
 
-          {/* Back to Home Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+            <div className="divider-royal mb-8" />
+            <p className="font-serif text-xl text-primary mb-8">Thank you for choosing Kovish!</p>
             <Link to="/">
-              <motion.button
-                className="btn-gold flex items-center justify-center gap-3 mx-auto"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
+              <motion.button className="btn-gold flex items-center justify-center gap-3 mx-auto" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Home className="w-5 h-5" />
                 Back to Home
               </motion.button>
