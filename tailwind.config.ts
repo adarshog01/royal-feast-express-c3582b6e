@@ -19,8 +19,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ["Playfair Display", "Georgia", "serif"],
+        serif: ["Playfair Display", "Cormorant Garamond", "Georgia", "serif"],
+        display: ["Cormorant Garamond", "Playfair Display", "serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      letterSpacing: {
+        'luxury': '0.15em',
+        'royal': '0.3em',
       },
       colors: {
         border: "hsl(var(--border))",
@@ -60,14 +65,18 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           light: "hsl(var(--gold-light))",
           dark: "hsl(var(--gold-dark))",
+          metallic: "hsl(var(--gold-metallic))",
+          glow: "hsl(var(--gold-glow))",
         },
         chocolate: {
           DEFAULT: "hsl(var(--chocolate))",
           light: "hsl(var(--chocolate-light))",
+          mid: "hsl(var(--chocolate-mid))",
         },
         cream: {
           DEFAULT: "hsl(var(--cream))",
           dark: "hsl(var(--cream-dark))",
+          warm: "hsl(var(--cream-warm))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -131,8 +140,8 @@ export default {
           "100%": { backgroundPosition: "200% 0" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(43 74% 49% / 0.3)" },
-          "50%": { boxShadow: "0 0 40px hsl(43 74% 49% / 0.5)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(42 60% 57% / 0.3)" },
+          "50%": { boxShadow: "0 0 50px hsl(42 60% 57% / 0.5)" },
         },
       },
       animation: {
@@ -147,7 +156,7 @@ export default {
         "slide-out-right": "slide-out-right 0.3s ease-out",
         float: "float 3s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
-        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 3s ease-in-out infinite",
       },
     },
   },
