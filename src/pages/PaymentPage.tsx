@@ -70,10 +70,9 @@ const PaymentPage = () => {
       currency: "INR",
       name: "Kovish",
       description: "Order Payment",
-      handler: (response: any) => {
+      handler: function (response: any) {
         const paymentId = response.razorpay_payment_id;
 
-        // Store for success page
         const orderDetails = {
           orderId,
           items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
@@ -85,22 +84,41 @@ const PaymentPage = () => {
           paymentId,
         };
 
-        // Send order data to Google Sheets, then redirect
-        sendOrderData(paymentId, orderId)
-          .then(() => {
-            setOrderId(orderId);
-            sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
-            clearCart();
-            navigate("/order-success");
+        fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8",
+          },
+          body: JSON.stringify({
+            orderId,
+            sector: selectedSector,
+            zone: selectedZone,
+            items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
+            subtotal,
+            discount,
+            delivery: deliveryCharge,
+            total,
+            payment_id: paymentId,
+            date: new Date().toLocaleDateString('en-IN'),
+            time: new Date().toLocaleTimeString('en-IN'),
           })
-          .catch(() => {
-            // Still redirect even if webhook fails
-            setOrderId(orderId);
-            sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
-            clearCart();
-            navigate("/order-success");
-            toast.error("Order placed but notification failed. We'll follow up.");
-          });
+        })
+        .then(res => res.json())
+        .then(data => {
+          console.log("Order saved:", data);
+          setOrderId(orderId);
+          sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
+          clearCart();
+          window.location.href = "/order-success";
+        })
+        .catch(error => {
+          console.error("Error saving order:", error);
+          alert("Order saved but logging failed.");
+          setOrderId(orderId);
+          sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
+          clearCart();
+          window.location.href = "/order-success";
+        });
       },
       modal: {
         ondismiss: () => {
