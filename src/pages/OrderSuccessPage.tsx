@@ -16,6 +16,7 @@ interface OrderDetails {
   zone: string;
   date: string;
   time: string;
+  paymentId?: string;
 }
 
 const OrderSuccessPage = () => {
@@ -79,6 +80,9 @@ const OrderSuccessPage = () => {
               className="mb-8"
             >
               <p className="text-primary font-serif text-xl font-semibold mb-1">{order.orderId}</p>
+              {order.paymentId && (
+                <p className="text-muted-foreground text-xs mb-1">Payment ID: {order.paymentId}</p>
+              )}
               <p className="text-muted-foreground text-sm">{order.date} at {order.time}</p>
             </motion.div>
           )}

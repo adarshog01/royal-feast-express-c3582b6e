@@ -1,54 +1,118 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CreditCard, Smartphone, Wallet, Lock, Shield, Truck } from "lucide-react";
+import { ArrowLeft, Lock, Shield, Truck } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { generateOrderId } from "@/data/deliveryZones";
 import PageTransition from "@/components/PageTransition";
+import { toast } from "sonner";
 
-type PaymentMethod = "upi" | "card" | "wallet";
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+const RAZORPAY_KEY = "rzp_test_SLwOCZEcOZJQGX";
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwRPg5EOFTgD0CADbnbQ19XFa8iV1dx-J40aBmniy9WF05g_ZZOjuQrnB4IZaiT8OVsmQ/exec";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
   const { items, subtotal, discount, deliveryCharge, total, selectedSector, selectedZone, clearCart, setOrderId } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const [processing, setProcessing] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [upiId, setUpiId] = useState("");
 
   if (items.length === 0) {
     navigate("/");
     return null;
   }
 
-  const handlePayment = async () => {
-    setProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-    const orderId = generateOrderId();
-    setOrderId(orderId);
-    // Store order details for success page
-    sessionStorage.setItem('kovish_last_order', JSON.stringify({
+  const sendWebhook = async (paymentId: string, orderId: string) => {
+    const orderData = {
       orderId,
-      items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-      subtotal, discount, deliveryCharge, total,
       sector: selectedSector,
       zone: selectedZone,
+      items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+      subtotal,
+      discount,
+      delivery: deliveryCharge,
+      total,
+      payment_id: paymentId,
       date: new Date().toLocaleDateString('en-IN'),
       time: new Date().toLocaleTimeString('en-IN'),
-    }));
-    clearCart();
-    navigate("/order-success");
+    };
+
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+        mode: "no-cors",
+      });
+    } catch (err) {
+      console.error("Webhook error:", err);
+    }
   };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const parts = [];
-    for (let i = 0; i < v.length && i < 16; i += 4) {
-      parts.push(v.substring(i, i + 4));
+  const handlePayment = () => {
+    if (processing) return;
+    setProcessing(true);
+
+    const amountInPaise = Math.round(total * 100);
+    const orderId = generateOrderId();
+
+    const options = {
+      key: RAZORPAY_KEY,
+      amount: amountInPaise,
+      currency: "INR",
+      name: "Kovish",
+      description: "Order Payment",
+      handler: async (response: any) => {
+        const paymentId = response.razorpay_payment_id;
+
+        // Send webhook
+        await sendWebhook(paymentId, orderId);
+
+        // Store for success page
+        setOrderId(orderId);
+        sessionStorage.setItem('kovish_last_order', JSON.stringify({
+          orderId,
+          items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
+          subtotal, discount, deliveryCharge, total,
+          sector: selectedSector,
+          zone: selectedZone,
+          date: new Date().toLocaleDateString('en-IN'),
+          time: new Date().toLocaleTimeString('en-IN'),
+          paymentId,
+        }));
+
+        clearCart();
+        navigate("/order-success");
+      },
+      modal: {
+        ondismiss: () => {
+          setProcessing(false);
+          toast.error("Payment was cancelled. You can try again.");
+        },
+      },
+      prefill: {},
+      theme: {
+        color: "#C6A75E",
+      },
+    };
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (response: any) => {
+        setProcessing(false);
+        toast.error("Payment failed. Please try again.");
+        console.error("Payment failed:", response.error);
+      });
+      rzp.open();
+    } catch (err) {
+      setProcessing(false);
+      toast.error("Could not open payment gateway. Please try again.");
+      console.error("Razorpay error:", err);
     }
-    return parts.join(" ");
   };
 
   return (
@@ -69,10 +133,10 @@ const PaymentPage = () => {
         </div>
 
         <div className="container mx-auto px-4 py-10 relative z-10">
-          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-10">
+          <div className="max-w-lg mx-auto">
             {/* Order Summary */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="order-2 md:order-1">
-              <div className="bg-card rounded-2xl p-6 border border-border/50 sticky top-24" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="bg-card rounded-2xl p-6 border border-border/50" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <h2 className="font-serif text-2xl font-semibold text-secondary mb-6">Order Summary</h2>
                 <div className="space-y-3 mb-6">
                   {items.map((item) => (
@@ -105,93 +169,12 @@ const PaymentPage = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-border">
-                  <div className="flex items-center justify-center gap-6 text-muted-foreground text-xs">
-                    <div className="flex items-center gap-1"><Lock className="w-3 h-3" /> SSL Encrypted</div>
-                    <div className="flex items-center gap-1"><Shield className="w-3 h-3" /> Secure Payment</div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Payment Form */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="order-1 md:order-2">
-              <div className="bg-card rounded-2xl p-6 border border-border/50" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <h2 className="font-serif text-2xl font-semibold text-secondary mb-6">Payment Method</h2>
-
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  {([
-                    { id: "upi" as const, icon: Smartphone, label: "UPI" },
-                    { id: "card" as const, icon: CreditCard, label: "Card" },
-                    { id: "wallet" as const, icon: Wallet, label: "Wallet" },
-                  ]).map((method) => (
-                    <button
-                      key={method.id}
-                      onClick={() => setPaymentMethod(method.id)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-300 ${
-                        paymentMethod === method.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/30"
-                      }`}
-                    >
-                      <method.icon className={`w-6 h-6 ${paymentMethod === method.id ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className={`text-sm font-medium ${paymentMethod === method.id ? "text-primary" : "text-muted-foreground"}`}>
-                        {method.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {paymentMethod === "upi" && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">UPI ID</label>
-                      <input type="text" value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="yourname@upi" className="input-luxury" />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {["Google Pay", "PhonePe", "Paytm", "BHIM"].map((app) => (
-                        <button key={app} className="px-4 py-2 bg-muted rounded-full text-sm hover:bg-muted-foreground/15 transition-colors">{app}</button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {paymentMethod === "card" && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Card Number</label>
-                      <input type="text" value={cardNumber} onChange={(e) => setCardNumber(formatCardNumber(e.target.value))} placeholder="1234 5678 9012 3456" maxLength={19} className="input-luxury" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">Expiry</label>
-                        <input type="text" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" maxLength={5} className="input-luxury" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">CVV</label>
-                        <input type="password" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="•••" maxLength={4} className="input-luxury" />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {paymentMethod === "wallet" && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                    {["Paytm Wallet", "PhonePe Wallet", "Amazon Pay", "Mobikwik"].map((wallet) => (
-                      <button key={wallet} className="w-full p-4 border border-border rounded-xl text-left hover:bg-muted transition-colors flex items-center justify-between">
-                        <span className="text-sm">{wallet}</span>
-                        <span className="text-primary">→</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-
                 <motion.button
                   onClick={handlePayment}
                   disabled={processing}
-                  className="w-full mt-8 btn-gold py-4 text-lg flex items-center justify-center gap-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="w-full mt-8 btn-gold py-4 text-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  whileHover={!processing ? { scale: 1.02 } : {}}
+                  whileTap={!processing ? { scale: 0.98 } : {}}
                 >
                   {processing ? (
                     <>
@@ -203,9 +186,15 @@ const PaymentPage = () => {
                   )}
                 </motion.button>
 
-                <p className="text-center text-xs text-muted-foreground mt-4">
-                  Your payment is securely encrypted with 256-bit SSL
-                </p>
+                <div className="mt-6 pt-6 border-t border-border">
+                  <div className="flex items-center justify-center gap-6 text-muted-foreground text-xs">
+                    <div className="flex items-center gap-1"><Lock className="w-3 h-3" /> SSL Encrypted</div>
+                    <div className="flex items-center gap-1"><Shield className="w-3 h-3" /> Secure Payment</div>
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground mt-3">
+                    Powered by Razorpay • Your payment is securely encrypted
+                  </p>
+                </div>
               </div>
             </motion.div>
           </div>
