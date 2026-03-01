@@ -26,31 +26,35 @@ const PaymentPage = () => {
     return null;
   }
 
-  const sendWebhook = async (paymentId: string, orderId: string) => {
-    const orderData = {
-      orderId,
-      sector: selectedSector,
-      zone: selectedZone,
-      items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-      subtotal,
-      discount,
-      delivery: deliveryCharge,
-      total,
-      payment_id: paymentId,
-      date: new Date().toLocaleDateString('en-IN'),
-      time: new Date().toLocaleTimeString('en-IN'),
-    };
-
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-        mode: "no-cors",
+  const sendOrderData = (paymentId: string, orderId: string): Promise<any> => {
+    return fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderId,
+        sector: selectedSector,
+        zone: selectedZone,
+        items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
+        subtotal,
+        discount,
+        delivery: deliveryCharge,
+        total,
+        payment_id: paymentId,
+        date: new Date().toLocaleDateString('en-IN'),
+        time: new Date().toLocaleTimeString('en-IN'),
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Order saved:", data);
+        return data;
+      })
+      .catch(error => {
+        console.error("Error saving order:", error);
+        throw error;
       });
-    } catch (err) {
-      console.error("Webhook error:", err);
-    }
   };
 
   const handlePayment = () => {
@@ -66,15 +70,11 @@ const PaymentPage = () => {
       currency: "INR",
       name: "Kovish",
       description: "Order Payment",
-      handler: async (response: any) => {
+      handler: (response: any) => {
         const paymentId = response.razorpay_payment_id;
 
-        // Send webhook
-        await sendWebhook(paymentId, orderId);
-
         // Store for success page
-        setOrderId(orderId);
-        sessionStorage.setItem('kovish_last_order', JSON.stringify({
+        const orderDetails = {
           orderId,
           items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
           subtotal, discount, deliveryCharge, total,
@@ -83,10 +83,24 @@ const PaymentPage = () => {
           date: new Date().toLocaleDateString('en-IN'),
           time: new Date().toLocaleTimeString('en-IN'),
           paymentId,
-        }));
+        };
 
-        clearCart();
-        navigate("/order-success");
+        // Send order data to Google Sheets, then redirect
+        sendOrderData(paymentId, orderId)
+          .then(() => {
+            setOrderId(orderId);
+            sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
+            clearCart();
+            navigate("/order-success");
+          })
+          .catch(() => {
+            // Still redirect even if webhook fails
+            setOrderId(orderId);
+            sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
+            clearCart();
+            navigate("/order-success");
+            toast.error("Order placed but notification failed. We'll follow up.");
+          });
       },
       modal: {
         ondismiss: () => {
