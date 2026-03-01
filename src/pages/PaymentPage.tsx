@@ -14,7 +14,6 @@ declare global {
 }
 
 const RAZORPAY_KEY = "rzp_test_SLwOCZEcOZJQGX";
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwRPg5EOFTgD0CADbnbQ19XFa8iV1dx-J40aBmniy9WF05g_ZZOjuQrnB4IZaiT8OVsmQ/exec";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
@@ -26,43 +25,22 @@ const PaymentPage = () => {
     return null;
   }
 
-  const sendOrderData = (paymentId: string, orderId: string): Promise<any> => {
-    return fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        orderId,
-        sector: selectedSector,
-        zone: selectedZone,
-        items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
-        subtotal,
-        discount,
-        delivery: deliveryCharge,
-        total,
-        payment_id: paymentId,
-        date: new Date().toLocaleDateString('en-IN'),
-        time: new Date().toLocaleTimeString('en-IN'),
-      }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log("Order saved:", data);
-        return data;
-      })
-      .catch(error => {
-        console.error("Error saving order:", error);
-        throw error;
-      });
-  };
-
   const handlePayment = () => {
     if (processing) return;
     setProcessing(true);
 
     const amountInPaise = Math.round(total * 100);
     const orderId = generateOrderId();
+
+    // Store order data in localStorage BEFORE opening Razorpay
+    localStorage.setItem("kovish_orderId", orderId);
+    localStorage.setItem("kovish_sector", String(selectedSector || ""));
+    localStorage.setItem("kovish_zone", selectedZone || "");
+    localStorage.setItem("kovish_cartItems", JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))));
+    localStorage.setItem("kovish_subtotal", String(subtotal));
+    localStorage.setItem("kovish_discount", String(discount));
+    localStorage.setItem("kovish_delivery", String(deliveryCharge));
+    localStorage.setItem("kovish_total", String(total));
 
     const options = {
       key: RAZORPAY_KEY,
@@ -71,54 +49,9 @@ const PaymentPage = () => {
       name: "Kovish",
       description: "Order Payment",
       handler: function (response: any) {
-        const paymentId = response.razorpay_payment_id;
-
-        const orderDetails = {
-          orderId,
-          items: items.map(i => ({ name: i.name, qty: i.quantity, price: i.price })),
-          subtotal, discount, deliveryCharge, total,
-          sector: selectedSector,
-          zone: selectedZone,
-          date: new Date().toLocaleDateString('en-IN'),
-          time: new Date().toLocaleTimeString('en-IN'),
-          paymentId,
-        };
-
-        fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8",
-          },
-          body: JSON.stringify({
-            orderId,
-            sector: selectedSector,
-            zone: selectedZone,
-            items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
-            subtotal,
-            discount,
-            delivery: deliveryCharge,
-            total,
-            payment_id: paymentId,
-            date: new Date().toLocaleDateString('en-IN'),
-            time: new Date().toLocaleTimeString('en-IN'),
-          })
-        })
-        .then(res => res.json())
-        .then(data => {
-          console.log("Order saved:", data);
-          setOrderId(orderId);
-          sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
-          clearCart();
-          window.location.href = "/order-success";
-        })
-        .catch(error => {
-          console.error("Error saving order:", error);
-          alert("Order saved but logging failed.");
-          setOrderId(orderId);
-          sessionStorage.setItem('kovish_last_order', JSON.stringify(orderDetails));
-          clearCart();
-          window.location.href = "/order-success";
-        });
+        // Only redirect — fetch happens on order-success page
+        clearCart();
+        window.location.href = "/order-success?payment_id=" + response.razorpay_payment_id;
       },
       modal: {
         ondismiss: () => {
