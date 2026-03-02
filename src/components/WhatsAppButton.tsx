@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { MessageCircleMore } from "lucide-react";
 
 const WhatsAppButton = () => {
   const handleClick = () => {
@@ -15,11 +15,11 @@ const WhatsAppButton = () => {
       transition={{ delay: 1.5, type: "spring", stiffness: 200 }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      aria-label="Chat on WhatsApp"
-    >
-      <MessageCircle className="w-6 h-6" />
-    </motion.button>
-  );
+      aria-label="Chat on WhatsApp">
+
+      <MessageCircleMore className="w-6 h-6" />
+    </motion.button>);
+
 };
 
 export default WhatsAppButton;
