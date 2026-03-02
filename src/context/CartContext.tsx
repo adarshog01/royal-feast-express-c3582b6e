@@ -5,6 +5,14 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
+const deliveryMap: Record<number, number> = {
+  1: 40, 2: 40, 3: 40, 4: 40, 5: 40,
+  6: 35, 7: 35,
+  8: 30, 9: 30,
+  10: 25, 11: 25, 12: 25,
+  13: 20, 14: 20, 15: 20,
+};
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: MenuItem) => void;
@@ -26,9 +34,16 @@ interface CartContextType {
   cartBounce: boolean;
   selectedSector: number | null;
   setSelectedSector: (sector: number | null) => void;
-  selectedZone: string | null;
   orderId: string | null;
   setOrderId: (id: string) => void;
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  phoneNumber: string;
+  setPhoneNumber: (phone: string) => void;
+  fullAddress: string;
+  setFullAddress: (address: string) => void;
+  landmark: string;
+  setLandmark: (landmark: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -42,23 +57,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
   const [selectedSector, setSelectedSectorState] = useState<number | null>(null);
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [fullAddress, setFullAddress] = useState("");
+  const [landmark, setLandmark] = useState("");
 
   const setSelectedSector = useCallback((sector: number | null) => {
     setSelectedSectorState(sector);
     if (sector) {
-      // Dynamically import to avoid circular deps
-      import("@/data/deliveryZones").then(({ getZoneBySector }) => {
-        const zone = getZoneBySector(sector);
-        if (zone) {
-          setSelectedZone(zone.name);
-          setDeliveryCharge(zone.charge);
-        }
-      });
+      setDeliveryCharge(deliveryMap[sector] || 0);
     } else {
-      setSelectedZone(null);
       setDeliveryCharge(0);
     }
   }, []);
@@ -95,8 +105,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setItems([]);
     setCouponCode(null);
     setSelectedSectorState(null);
-    setSelectedZone(null);
     setDeliveryCharge(0);
+    setCustomerName("");
+    setPhoneNumber("");
+    setFullAddress("");
+    setLandmark("");
   }, []);
 
   const applyCoupon = useCallback((code: string): boolean => {
@@ -126,8 +139,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       totalItems, subtotal, discount, deliveryCharge, total,
       couponCode, applyCoupon, removeCoupon,
       isCartOpen, openCart, closeCart, toggleCart, cartBounce,
-      selectedSector, setSelectedSector, selectedZone,
+      selectedSector, setSelectedSector,
       orderId, setOrderId,
+      customerName, setCustomerName,
+      phoneNumber, setPhoneNumber,
+      fullAddress, setFullAddress,
+      landmark, setLandmark,
     }}>
       {children}
     </CartContext.Provider>
