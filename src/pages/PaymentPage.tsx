@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { generateOrderId } from "@/data/deliveryZones";
 import PageTransition from "@/components/PageTransition";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 declare global {
   interface Window {
@@ -32,7 +33,7 @@ const PaymentPage = () => {
     const amountInPaise = Math.round(total * 100);
     const orderId = generateOrderId();
 
-    // Store order data in localStorage BEFORE opening Razorpay
+    // Store order data in localStorage for order-success display
     localStorage.setItem("kovish_orderId", orderId);
     localStorage.setItem("kovish_sector", String(selectedSector || ""));
     localStorage.setItem("kovish_zone", selectedZone || "");
@@ -48,10 +49,34 @@ const PaymentPage = () => {
       currency: "INR",
       name: "Kovish",
       description: "Order Payment",
-      handler: function (response: any) {
-        // Only redirect — fetch happens on order-success page
+      handler: async function (response: any) {
+        const paymentId = response.razorpay_payment_id;
+
+        // Insert order into Supabase
+        const { error } = await supabase.from("Orders").insert([
+          {
+            order_id: orderId,
+            order_date: new Date().toISOString(),
+            sector: selectedSector,
+            items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
+            subtotal: subtotal,
+            discount: discount,
+            delivery: deliveryCharge,
+            total: total,
+            payment_id: paymentId,
+          }
+        ]);
+
+        if (error) {
+          console.error("Supabase Insert Error:", error);
+          alert("Order saved failed. Please contact support.");
+        } else {
+          console.log("Order saved successfully.");
+        }
+
+        localStorage.setItem("kovish_paymentId", paymentId);
         clearCart();
-        window.location.href = "/order-success?payment_id=" + response.razorpay_payment_id;
+        window.location.href = "/order-success";
       },
       modal: {
         ondismiss: () => {
