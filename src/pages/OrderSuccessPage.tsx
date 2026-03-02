@@ -1,11 +1,9 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle, Home, MapPin, Truck } from "lucide-react";
+import { CheckCircle, Home, Truck } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import confetti from "canvas-confetti";
-
-const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwRPg5EOFTgD0CADbnbQ19XFa8iV1dx-J40aBmniy9WF05g_ZZOjuQrnB4IZaiT8OVsmQ/exec";
 
 interface OrderDetails {
   orderId: string;
@@ -23,13 +21,8 @@ interface OrderDetails {
 
 const OrderSuccessPage = () => {
   const [order, setOrder] = useState<OrderDetails | null>(null);
-  const fetchSent = useRef(false);
 
   useEffect(() => {
-    // Get payment_id from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentId = urlParams.get("payment_id");
-
     // Build order from localStorage
     const orderId = localStorage.getItem("kovish_orderId") || "";
     const sector = localStorage.getItem("kovish_sector") || "";
@@ -39,6 +32,7 @@ const OrderSuccessPage = () => {
     const discountVal = localStorage.getItem("kovish_discount") || "0";
     const deliveryVal = localStorage.getItem("kovish_delivery") || "0";
     const totalVal = localStorage.getItem("kovish_total") || "0";
+    const paymentId = localStorage.getItem("kovish_paymentId") || "";
     const date = new Date().toLocaleDateString('en-IN');
     const time = new Date().toLocaleTimeString('en-IN');
 
@@ -57,38 +51,6 @@ const OrderSuccessPage = () => {
       time,
       paymentId: paymentId || undefined,
     });
-
-    // Send POST to Google Sheets — only once
-    if (paymentId && !fetchSent.current) {
-      fetchSent.current = true;
-
-      fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify({
-          orderId,
-          sector,
-          zone,
-          items: cartItems,
-          subtotal: subtotalVal,
-          discount: discountVal,
-          delivery: deliveryVal,
-          total: totalVal,
-          payment_id: paymentId,
-          date,
-          time,
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        console.log("Order saved:", data);
-      })
-      .catch(err => {
-        console.error("Error saving order:", err);
-      });
-    }
 
     // Gold confetti
     const duration = 3000;
