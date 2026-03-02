@@ -1,37 +1,24 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, MapPin, CheckCircle2, AlertCircle, Truck, ChevronDown, User, Home } from "lucide-react";
+import { Phone, MapPin, CheckCircle2, AlertCircle, Truck, ChevronDown } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { getAllSectors } from "@/data/deliveryZones";
 import PageTransition from "@/components/PageTransition";
+
+const allSectors = getAllSectors();
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const {
     items, subtotal, discount, deliveryCharge, total,
-    selectedSector, setSelectedSector,
-    customerName, setCustomerName,
-    phoneNumber, setPhoneNumber,
-    fullAddress, setFullAddress,
-    landmark, setLandmark,
+    selectedSector, setSelectedSector, selectedZone,
   } = useCart();
   const [callConfirmed, setCallConfirmed] = useState(false);
   const [showCallNotice, setShowCallNotice] = useState(false);
 
   const handleProceedToPayment = () => {
     if (!selectedSector || !callConfirmed) return;
-    if (!customerName.trim()) {
-      alert("Please enter your full name.");
-      return;
-    }
-    if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
-      alert("Enter a valid 10-digit phone number.");
-      return;
-    }
-    if (!fullAddress.trim()) {
-      alert("Please enter your full address.");
-      return;
-    }
     navigate("/payment");
   };
 
@@ -95,7 +82,7 @@ const CheckoutPage = () => {
               )}
               {selectedSector && (
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Delivery (Sector {selectedSector})</span>
+                  <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Delivery ({selectedZone})</span>
                   <span>₹{deliveryCharge}</span>
                 </div>
               )}
@@ -129,16 +116,16 @@ const CheckoutPage = () => {
                 className="input-luxury appearance-none pr-10 cursor-pointer"
               >
                 <option value="">Select your sector...</option>
-                {Array.from({ length: 15 }, (_, i) => i + 1).map((sector) => (
+                {allSectors.map(({ sector, zone }) => (
                   <option key={sector} value={sector}>
-                    Sector {sector}
+                    Sector {sector} — {zone.name} (₹{zone.charge} delivery)
                   </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
 
-            {selectedSector && (
+            {selectedSector && selectedZone && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -146,68 +133,12 @@ const CheckoutPage = () => {
                 style={{ background: 'hsl(42 60% 57% / 0.06)', borderColor: 'hsl(42 60% 57% / 0.3)' }}
               >
                 <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                <p className="font-medium text-sm">Sector {selectedSector} selected</p>
+                <div>
+                  <p className="font-medium text-sm">Sector {selectedSector} — {selectedZone}</p>
+                  <p className="text-xs text-muted-foreground">Delivery charge: ₹{deliveryCharge}</p>
+                </div>
               </motion.div>
             )}
-          </motion.div>
-
-          {/* Customer Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="bg-card rounded-2xl p-6 mb-6 border border-border/50"
-            style={{ boxShadow: 'var(--shadow-card)' }}
-          >
-            <h2 className="font-serif text-xl font-semibold text-secondary mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Delivery Details
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Full Name *</label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="input-luxury"
-                  maxLength={100}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Phone Number *</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="10-digit mobile number"
-                  className="input-luxury"
-                  maxLength={10}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Full Address *</label>
-                <textarea
-                  value={fullAddress}
-                  onChange={(e) => setFullAddress(e.target.value)}
-                  placeholder="House/Flat No., Street, Area"
-                  className="input-luxury min-h-[80px] resize-none"
-                  maxLength={500}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1.5">Landmark <span className="text-xs">(optional)</span></label>
-                <input
-                  type="text"
-                  value={landmark}
-                  onChange={(e) => setLandmark(e.target.value)}
-                  placeholder="Near park, school, etc."
-                  className="input-luxury"
-                  maxLength={200}
-                />
-              </div>
-            </div>
           </motion.div>
 
           {/* Call Confirmation */}

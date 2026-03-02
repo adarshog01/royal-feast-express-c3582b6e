@@ -18,11 +18,7 @@ const RAZORPAY_KEY = "rzp_test_SLwOCZEcOZJQGX";
 
 const PaymentPage = () => {
   const navigate = useNavigate();
-  const {
-    items, subtotal, discount, deliveryCharge, total,
-    selectedSector, clearCart, setOrderId,
-    customerName, phoneNumber, fullAddress, landmark,
-  } = useCart();
+  const { items, subtotal, discount, deliveryCharge, total, selectedSector, selectedZone, clearCart, setOrderId } = useCart();
   const [processing, setProcessing] = useState(false);
 
   if (items.length === 0) {
@@ -32,12 +28,6 @@ const PaymentPage = () => {
 
   const handlePayment = () => {
     if (processing) return;
-
-    // Final validation
-    if (!customerName.trim()) { toast.error("Customer name is required."); return; }
-    if (!/^[6-9]\d{9}$/.test(phoneNumber)) { toast.error("Enter a valid 10-digit phone number."); return; }
-    if (!fullAddress.trim()) { toast.error("Address is required."); return; }
-
     setProcessing(true);
 
     const amountInPaise = Math.round(total * 100);
@@ -46,6 +36,7 @@ const PaymentPage = () => {
     // Store order data in localStorage for order-success display
     localStorage.setItem("kovish_orderId", orderId);
     localStorage.setItem("kovish_sector", String(selectedSector || ""));
+    localStorage.setItem("kovish_zone", selectedZone || "");
     localStorage.setItem("kovish_cartItems", JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))));
     localStorage.setItem("kovish_subtotal", String(subtotal));
     localStorage.setItem("kovish_discount", String(discount));
@@ -61,15 +52,12 @@ const PaymentPage = () => {
       handler: async function (response: any) {
         const paymentId = response.razorpay_payment_id;
 
+        // Insert order into Supabase
         const { error } = await supabase.from("Orders").insert([
           {
             order_id: orderId,
             order_date: new Date().toISOString(),
             sector: selectedSector,
-            customer_name: customerName,
-            phone_no: phoneNumber,
-            address: fullAddress,
-            landmark: landmark || null,
             items: JSON.stringify(items.map(i => ({ name: i.name, qty: i.quantity, price: i.price }))),
             subtotal: subtotal,
             discount: discount,
@@ -81,7 +69,9 @@ const PaymentPage = () => {
 
         if (error) {
           console.error("Supabase Insert Error:", error);
-          alert("Order saving failed. Please contact support.");
+          alert("Order saved failed. Please contact support.");
+        } else {
+          console.log("Order saved successfully.");
         }
 
         localStorage.setItem("kovish_paymentId", paymentId);
@@ -94,10 +84,7 @@ const PaymentPage = () => {
           toast.error("Payment was cancelled. You can try again.");
         },
       },
-      prefill: {
-        name: customerName,
-        contact: phoneNumber,
-      },
+      prefill: {},
       theme: {
         color: "#C6A75E",
       },
@@ -121,6 +108,7 @@ const PaymentPage = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-background grain-texture">
+        {/* Header */}
         <div className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -136,6 +124,7 @@ const PaymentPage = () => {
 
         <div className="container mx-auto px-4 py-10 relative z-10">
           <div className="max-w-lg mx-auto">
+            {/* Order Summary */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="bg-card rounded-2xl p-6 border border-border/50" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <h2 className="font-serif text-2xl font-semibold text-secondary mb-6">Order Summary</h2>

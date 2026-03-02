@@ -10,7 +10,7 @@ const Cart = () => {
     items, removeItem, updateQuantity,
     subtotal, discount, deliveryCharge, total,
     couponCode, applyCoupon, removeCoupon,
-    isCartOpen, closeCart, selectedSector,
+    isCartOpen, closeCart, selectedSector, selectedZone,
   } = useCart();
 
   const [couponInput, setCouponInput] = useState("");
@@ -183,7 +183,7 @@ const Cart = () => {
                   )}
                   {selectedSector && (
                     <div className="flex justify-between text-muted-foreground">
-                      <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Delivery (Sector {selectedSector})</span>
+                      <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Delivery ({selectedZone})</span>
                       <span>₹{deliveryCharge}</span>
                     </div>
                   )}
